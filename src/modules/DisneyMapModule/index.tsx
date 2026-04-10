@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { observer } from "mobx-react-lite";
-import { Container } from "./DisneyMapModule.styled";
+import { Container, MarkerContainer } from "./DisneyMapModule.styled";
 import {
   APIProvider,
   Map,
@@ -9,7 +9,7 @@ import {
   InfoWindow,
   useMap,
 } from "@vis.gl/react-google-maps";
-import { MarkerClusterer, Marker } from "@googlemaps/markerclusterer";
+import { MarkerClusterer } from "@googlemaps/markerclusterer";
 import pois from "../../pois.json";
 
 const POI_ICONS = {
@@ -30,9 +30,11 @@ const POI_ICONS = {
  */
 const MarkersWithClustering = ({ pois, onMarkerClick }) => {
   const map = useMap();
-  const clusterer = useRef(null);
-  const markerInstances = useRef({});
-  const [markersLoaded, setMarkersLoaded] = useState(0);
+  const clusterer = useRef<MarkerClusterer | null>(null);
+  // Store marker instances in a Ref to avoid re-render loops
+  const markerInstances = useRef<
+    Record<string, google.maps.marker.AdvancedMarkerElement>
+  >({});
 
   // 1. Initialize Clusterer
   useEffect(() => {
@@ -42,33 +44,33 @@ const MarkersWithClustering = ({ pois, onMarkerClick }) => {
     }
   }, [map]);
 
-  // 2. Sync Clusterer whenever markers are added or filtered
+  // 2. The "Sync" Effect
+  // This runs whenever 'pois' changes (via filtering)
   useEffect(() => {
     if (!clusterer.current) return;
 
-    const currentMarkers = Object.values(markerInstances.current);
+    // Give React a tiny beat to finish the Ref assignments
+    const timer = setTimeout(() => {
+      const currentMarkers = Object.values(markerInstances.current);
+      clusterer.current?.clearMarkers();
+      clusterer.current?.addMarkers(currentMarkers);
+      clusterer.current?.render();
+    }, 50);
 
-    // Clear and re-add
-    clusterer.current.clearMarkers();
-    clusterer.current.addMarkers(currentMarkers);
+    return () => clearTimeout(timer);
+  }, [pois]);
 
-    // Force the clusterer to recalculate and draw
-    clusterer.current.render();
-  }, [pois, markersLoaded]);
-
-  // 3. Ref Callback Logic
-  const setMarkerRef = (marker, key) => {
+  const setMarkerRef = (
+    marker: google.maps.marker.AdvancedMarkerElement | null,
+    key: string,
+  ) => {
     if (marker) {
-      if (markerInstances.current[key]) return; // Prevent loop
       markerInstances.current[key] = marker;
-
-      // Update count to trigger the clusterer effect once all are in
-      setMarkersLoaded((prev) => prev + 1);
     } else {
+      // Logic for when a marker is removed (filtered out)
       if (markerInstances.current[key]) {
         markerInstances.current[key].map = null;
         delete markerInstances.current[key];
-        setMarkersLoaded((prev) => Math.max(0, prev - 1));
       }
     }
   };
@@ -88,17 +90,9 @@ const MarkersWithClustering = ({ pois, onMarkerClick }) => {
             ref={(el) => setMarkerRef(el, key)}
             onClick={() => onMarkerClick(poi)}
           >
-            {emoji ? (
-              <div style={{ fontSize: "24px", transform: "translateY(-50%)" }}>
-                {emoji}
-              </div>
-            ) : (
-              <Pin
-                background="#800080"
-                borderColor="#ffffff"
-                glyphColor="#ffffff"
-              />
-            )}
+            <MarkerContainer $delay={(index % 10) * 0.05}>
+              {emoji || "📍"}
+            </MarkerContainer>
           </AdvancedMarker>
         );
       })}
@@ -112,13 +106,15 @@ const DisneyMapContent = observer(() => {
   const [showAttractions, setShowAttractions] = useState(true);
   const [showHotels, setShowHotels] = useState(true);
 
-  const filteredPois = pois.filter(
-    (poi) =>
-      (showIcons && poi["Type of Interest"].toLowerCase().includes("icon")) ||
-      (showAttractions &&
-        poi["Type of Interest"].toLowerCase().includes("attraction")) ||
-      (showHotels && poi["Type of Interest"].toLowerCase().includes("hotel")),
-  );
+  const filteredPois = useMemo(() => {
+    return pois.filter((poi) => {
+      const type = poi["Type of Interest"].toLowerCase();
+      if (showIcons && type.includes("icon")) return true;
+      if (showAttractions && type.includes("attraction")) return true;
+      if (showHotels && type.includes("hotel")) return true;
+      return false;
+    });
+  }, [showIcons, showAttractions, showHotels]); // Only recalculate when checkboxes change
 
   return (
     <Container>
