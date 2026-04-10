@@ -1,0 +1,47 @@
+:root {
+  --width: 300px;
+  --height: 200px;
+  --tz: 150px; /* Half of width */
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+  margin: 0 auto;
+  text-align: center;
+}
+
+@keyframes rotate {
+  from {
+    transform: rotateY(0deg);
+  }
+  to {
+    transform: rotateY(360deg);
+  }
+}
+
+.card {
+}
+
+.card-flipper {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
+
+.flipped {
+  transform: rotateY(180deg);
+}
+
+.brand-card {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  background-repeat: no-repeat;
+  padding: 4px 0 0 0;
+}
