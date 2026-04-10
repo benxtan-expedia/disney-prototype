@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { observer } from "mobx-react-lite";
 import { Container, MarkerContainer } from "./DisneyMapModule.styled";
 import {
@@ -13,9 +13,9 @@ import { MarkerClusterer, DefaultRenderer } from "@googlemaps/markerclusterer";
 import pois from "../../pois.json";
 
 const DISNEY_COLORS = {
-  small: "#002147", // Disney Navy
-  medium: "#0063be", // Disney Royal Blue
-  large: "#eb0028", // Mickey Red
+  small: "#0063be",
+  medium: "#002147",
+  large: "#eb0028",
 };
 
 const POI_ICONS = {
@@ -30,9 +30,6 @@ const POI_ICONS = {
   stageshow: "🎭",
 };
 
-/**
- * Custom Renderer to apply Disney styling
- */
 /**
  * Custom Renderer to apply Disney styling
  */
@@ -76,7 +73,6 @@ const disneyRenderer = {
 const MarkersWithClustering = ({ pois, onMarkerClick }) => {
   const map = useMap();
   const clusterer = useRef<MarkerClusterer | null>(null);
-  // Store marker instances in a Ref to avoid re-render loops
   const markerInstances = useRef<
     Record<string, google.maps.marker.AdvancedMarkerElement>
   >({});
@@ -123,29 +119,29 @@ const MarkersWithClustering = ({ pois, onMarkerClick }) => {
     }
   };
 
-  return (
-    <>
-      {pois.map((poi, index) => {
-        const key = `${poi["Points of Interest"]}-${index}`;
-        const typeStr = poi["Type of Interest"].toLowerCase();
-        const iconKey = Object.keys(POI_ICONS).find((k) => typeStr.includes(k));
-        const emoji = POI_ICONS[iconKey];
+  const renderedMarkers = useMemo(() => {
+    return pois.map((poi, index) => {
+      const key = `${poi["Points of Interest"]}-${index}`;
+      const typeStr = poi["Type of Interest"].toLowerCase();
+      const iconKey = Object.keys(POI_ICONS).find((k) => typeStr.includes(k));
+      const emoji = POI_ICONS[iconKey];
 
-        return (
-          <AdvancedMarker
-            key={key}
-            position={{ lat: poi.Latitude, lng: poi.Longitude }}
-            ref={(el) => setMarkerRef(el, key)}
-            onClick={() => onMarkerClick(poi)}
-          >
-            <MarkerContainer $delay={(index % 10) * 0.05}>
-              {emoji || "📍"}
-            </MarkerContainer>
-          </AdvancedMarker>
-        );
-      })}
-    </>
-  );
+      return (
+        <AdvancedMarker
+          key={key}
+          position={{ lat: poi.Latitude, lng: poi.Longitude }}
+          ref={(el) => setMarkerRef(el, key)}
+          onClick={() => onMarkerClick(poi)}
+        >
+          <MarkerContainer $delay={(index % 10) * 0.05}>
+            {emoji || "📍"}
+          </MarkerContainer>
+        </AdvancedMarker>
+      );
+    });
+  }, [pois, onMarkerClick]); // Only re-generate if POIs actually change
+
+  return <>{renderedMarkers}</>;
 };
 
 const DisneyMapContent = observer(() => {
@@ -163,6 +159,8 @@ const DisneyMapContent = observer(() => {
       return false;
     });
   }, [showIcons, showAttractions, showHotels]); // Only recalculate when checkboxes change
+
+  const handleMarkerClick = useCallback((poi) => setSelectedPoi(poi), []);
 
   return (
     <Container>
@@ -230,7 +228,7 @@ const DisneyMapContent = observer(() => {
       >
         <MarkersWithClustering
           pois={filteredPois}
-          onMarkerClick={(poi) => setSelectedPoi(poi)}
+          onMarkerClick={handleMarkerClick}
         />
 
         {selectedPoi && (
@@ -241,8 +239,10 @@ const DisneyMapContent = observer(() => {
             }}
             onCloseClick={() => setSelectedPoi(null)}
           >
-            <div style={{ color: "#000" }}>
-              <h3>{selectedPoi["Points of Interest"]}</h3>
+            <div style={{ color: "#000", paddingBottom: "16px" }}>
+              <h3 style={{ marginTop: 0 }}>
+                {selectedPoi["Points of Interest"]}
+              </h3>
               <div>{selectedPoi["Theme Park or Location"]}</div>
               <div>{selectedPoi["Area within Location"]}</div>
               <div>{selectedPoi["Type of Interest"]}</div>

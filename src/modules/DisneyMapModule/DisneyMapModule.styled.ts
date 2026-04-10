@@ -11,6 +11,14 @@ export const Container = styled.div`
   position: absolute;
   width: 100%;
   height: 100%;
+
+  /* Remove focus outline on clicked markers */
+  gmp-advanced-marker:focus,
+  gmp-advanced-marker:focus-visible,
+  [role="button"]:focus,
+  [role="button"]:focus-visible {
+    outline: none !important;
+  }
 `;
 
 const markerPop = keyframes`
@@ -28,7 +36,12 @@ const markerPop = keyframes`
 `;
 
 export const MarkerContainer = styled.div<{ $delay?: number }>`
-  font-size: 28px;
+  font-size: 24px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   display: flex;
   align-items: center;
   justify-content: center;
