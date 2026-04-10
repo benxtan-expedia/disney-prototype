@@ -1,15 +1,4 @@
-/**
- * DisneyMapModule
- *
- * A module that contains interactive buttons to modify MobX state.
- * Demonstrates:
- * - MobX actions (calling store.setText)
- * - Event handlers
- * - Styled components (imported from separate file)
- * - Observer pattern (re-renders when used observable changes)
- */
-
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { observer } from "mobx-react-lite";
 import { Container } from "./DisneyMapModule.styled";
 import {
@@ -18,152 +7,121 @@ import {
   AdvancedMarker,
   Pin,
   InfoWindow,
-  MapCameraChangedEvent,
+  useMap,
 } from "@vis.gl/react-google-maps";
+import { MarkerClusterer, Marker } from "@googlemaps/markerclusterer";
 import pois from "../../pois.json";
 
 /**
- * DisneyMapModule Component
- *
- * Contains CTA buttons that update the MobX store state.
- * The observer wrapper isn't strictly needed here since we're not reading observables,
- * but it's good practice for consistency.
+ * MarkersWithClustering Component
+ * Handles the logic of grouping markers together.
+ */
+const MarkersWithClustering = ({ pois, onMarkerClick }) => {
+  const map = useMap();
+  const [markers, setMarkers] = useState<{ [key: string]: Marker }>({});
+  const clusterer = useRef<MarkerClusterer | null>(null);
+
+  // Initialize MarkerClusterer
+  useEffect(() => {
+    if (!map) return;
+    if (!clusterer.current) {
+      clusterer.current = new MarkerClusterer({ map });
+    }
+  }, [map]);
+
+  // Update clusters when markers change
+  useEffect(() => {
+    clusterer.current?.clearMarkers();
+    clusterer.current?.addMarkers(Object.values(markers));
+  }, [markers]);
+
+  const setMarkerRef = (marker: Marker | null, key: string) => {
+    if (marker && markers[key]) return;
+    if (!marker && !markers[key]) return;
+
+    setMarkers((prev) => {
+      if (marker) {
+        return { ...prev, [key]: marker };
+      } else {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      }
+    });
+  };
+
+  return (
+    <>
+      {pois.map((poi, index) => {
+        const key = `${poi["Points of Interest"]}-${index}`;
+        return (
+          <AdvancedMarker
+            key={key}
+            position={{ lat: poi.Latitude, lng: poi.Longitude }}
+            ref={(marker) => setMarkerRef(marker, key)}
+            onClick={() => onMarkerClick(poi)}
+          >
+            {poi["Type of Interest"].toLowerCase().includes("hotel") ? (
+              <div style={{ fontSize: "24px", transform: "translateY(-50%)" }}>
+                🏨
+              </div>
+            ) : poi["Type of Interest"].toLowerCase().includes("attraction") ? (
+              <div style={{ fontSize: "24px", transform: "translateY(-50%)" }}>
+                🎢
+              </div>
+            ) : poi["Type of Interest"].toLowerCase().includes("icon") ? (
+              <div style={{ fontSize: "24px", transform: "translateY(-50%)" }}>
+                ⭐
+              </div>
+            ) : poi["Type of Interest"].toLowerCase().includes("fireworks") ? (
+              <div style={{ fontSize: "24px", transform: "translateY(-50%)" }}>
+                🎆
+              </div>
+            ) : poi["Type of Interest"]
+                .toLowerCase()
+                .includes("transportation") ? (
+              <div style={{ fontSize: "24px", transform: "translateY(-50%)" }}>
+                🚊
+              </div>
+            ) : poi["Type of Interest"]
+                .toLowerCase()
+                .includes("golf course") ? (
+              <div style={{ fontSize: "24px", transform: "translateY(-50%)" }}>
+                ⛳
+              </div>
+            ) : poi["Type of Interest"].toLowerCase().includes("pavilion") ? (
+              <div style={{ fontSize: "24px", transform: "translateY(-50%)" }}>
+                🎪
+              </div>
+            ) : poi["Type of Interest"]
+                .toLowerCase()
+                .includes("water slide") ? (
+              <div style={{ fontSize: "24px", transform: "translateY(-50%)" }}>
+                🌊
+              </div>
+            ) : poi["Type of Interest"].toLowerCase().includes("stageshow") ? (
+              <div style={{ fontSize: "24px", transform: "translateY(-50%)" }}>
+                🎭
+              </div>
+            ) : (
+              <Pin
+                background={"#800080"}
+                borderColor={"#ffffff"}
+                glyphColor={"#ffffff"}
+              />
+            )}
+          </AdvancedMarker>
+        );
+      })}
+    </>
+  );
+};
+
+/**
+ * Main DisneyMapModule
  */
 const DisneyMapModule = observer(() => {
   const [selectedPoi, setSelectedPoi] = useState(null);
-
-  console.log("There are ", pois.length, " POIs.");
-  console.log(pois);
-
-  const getMarkerColor = (type: string) => {
-    switch (type) {
-      case "Attraction":
-        return "#800080"; // Purple
-      case "Disney Resorts Collection Hotel":
-        return "#1e40af"; // Blue
-      case "Transportation":
-        return "#16a34a"; // Green
-      case "Icon":
-        return "#e11d48"; // Red
-      default:
-        return "#6b7280"; // Gray
-    }
-  };
-
-  /*
-  const mapStyles = [
-    {
-      featureType: "all",
-      elementType: "geometry",
-      stylers: [
-        {
-          color: "#63b5e5",
-        },
-      ],
-    },
-    {
-      featureType: "all",
-      elementType: "labels.text.fill",
-      stylers: [
-        {
-          gamma: 0.01,
-        },
-        {
-          lightness: 20,
-        },
-      ],
-    },
-    {
-      featureType: "all",
-      elementType: "labels.text.stroke",
-      stylers: [
-        {
-          saturation: -31,
-        },
-        {
-          lightness: -33,
-        },
-        {
-          weight: 2,
-        },
-        {
-          gamma: 0.8,
-        },
-      ],
-    },
-    {
-      featureType: "landscape",
-      elementType: "geometry",
-      stylers: [
-        {
-          lightness: 30,
-        },
-        {
-          saturation: -50,
-        },
-      ],
-    },
-    {
-      featureType: "all",
-      elementType: "labels.icon",
-      stylers: [{ visibility: "off" }],
-    },
-    {
-      featureType: "poi",
-      elementType: "geometry",
-      stylers: [
-        {
-          saturation: 20,
-        },
-      ],
-    },
-    {
-      featureType: "poi.park",
-      elementType: "geometry",
-      stylers: [
-        {
-          lightness: 20,
-        },
-        {
-          saturation: -20,
-        },
-      ],
-    },
-    {
-      featureType: "road",
-      elementType: "geometry",
-      stylers: [
-        {
-          lightness: 10,
-        },
-        {
-          saturation: -30,
-        },
-      ],
-    },
-    {
-      featureType: "road",
-      elementType: "geometry.stroke",
-      stylers: [
-        {
-          saturation: 25,
-        },
-        {
-          lightness: 25,
-        },
-      ],
-    },
-    {
-      featureType: "water",
-      elementType: "all",
-      stylers: [
-        {
-          lightness: -20,
-        },
-      ],
-    },
-  ];
-  */
 
   return (
     <Container>
@@ -172,94 +130,26 @@ const DisneyMapModule = observer(() => {
         onLoad={() => console.log("Maps API has loaded.")}
       >
         <Map
-          mapId={"29abc80053f0980f9e4443b2"} // REQUIRED for AdvancedMarker
+          mapId={"29abc80053f0980f9e4443b2"}
           defaultZoom={15}
+          minZoom={13}
+          maxZoom={20}
           defaultCenter={{ lat: 28.419411, lng: -81.5812 }}
-          //styles={mapStyles}
-          onCameraChanged={(ev: MapCameraChangedEvent) =>
-            console.log(
-              "camera changed:",
-              ev.detail.center,
-              "zoom:",
-              ev.detail.zoom,
-            )
-          }
+          restriction={{
+            latLngBounds: {
+              north: 28.44,
+              south: 28.32,
+              east: -81.4,
+              west: -81.7,
+            },
+            strictBounds: false, // Set to true to physically stop the camera from leaving
+          }}
         >
-          {pois.map((poi, index) => (
-            <AdvancedMarker
-              key={`${poi["Points of Interest"]}-${index}`}
-              position={{ lat: poi.Latitude, lng: poi.Longitude }}
-              title={poi["Points of Interest"]}
-              onClick={() => setSelectedPoi(poi)}
-            >
-              {poi["Type of Interest"].toLowerCase().includes("hotel") ? (
-                <div
-                  style={{ fontSize: "24px", transform: "translateY(-50%)" }}
-                >
-                  🏨
-                </div>
-              ) : poi["Type of Interest"]
-                  .toLowerCase()
-                  .includes("attraction") ? (
-                <div
-                  style={{ fontSize: "24px", transform: "translateY(-50%)" }}
-                >
-                  🎢
-                </div>
-              ) : poi["Type of Interest"].toLowerCase().includes("icon") ? (
-                <div
-                  style={{ fontSize: "24px", transform: "translateY(-50%)" }}
-                >
-                  ⭐
-                </div>
-              ) : poi["Type of Interest"]
-                  .toLowerCase()
-                  .includes("fireworks") ? (
-                <div
-                  style={{ fontSize: "24px", transform: "translateY(-50%)" }}
-                >
-                  🎆
-                </div>
-              ) : poi["Type of Interest"]
-                  .toLowerCase()
-                  .includes("transportation") ? (
-                <div
-                  style={{ fontSize: "24px", transform: "translateY(-50%)" }}
-                >
-                  🚊
-                </div>
-              ) : poi["Type of Interest"]
-                  .toLowerCase()
-                  .includes("golf course") ? (
-                <div
-                  style={{ fontSize: "24px", transform: "translateY(-50%)" }}
-                >
-                  ⛳
-                </div>
-              ) : poi["Type of Interest"].toLowerCase().includes("pavilion") ? (
-                <div
-                  style={{ fontSize: "24px", transform: "translateY(-50%)" }}
-                >
-                  🎪
-                </div>
-              ) : poi["Type of Interest"]
-                  .toLowerCase()
-                  .includes("water slide") ? (
-                <div
-                  style={{ fontSize: "24px", transform: "translateY(-50%)" }}
-                >
-                  🌊
-                </div>
-              ) : (
-                /* 📍 Case 3: Default Pin */
-                <Pin
-                  background={"#800080"}
-                  borderColor={"#ffffff"}
-                  glyphColor={"#ffffff"}
-                />
-              )}
-            </AdvancedMarker>
-          ))}
+          {/* Use the new Clustering component here */}
+          <MarkersWithClustering
+            pois={pois}
+            onMarkerClick={(poi) => setSelectedPoi(poi)}
+          />
 
           {selectedPoi && (
             <InfoWindow
@@ -276,7 +166,6 @@ const DisneyMapModule = observer(() => {
                 <p style={{ margin: "5px 0" }}>
                   {selectedPoi["Theme Park or Location"]}
                 </p>
-                {/* <small>{selectedPoi["Area within Location"]}</small> */}
               </div>
             </InfoWindow>
           )}
