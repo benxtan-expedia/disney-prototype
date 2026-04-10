@@ -15,7 +15,7 @@
     sans-serif;
   font-weight: 500;
   font-style: Medium;
-  font-size: 120px;
+  font-size: 1em;
   leading-trim: NONE;
   line-height: 66px;
   letter-spacing: -4%;
@@ -81,6 +81,10 @@ button:hover {
 button:focus,
 button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
+}
+
+label {
+  font-size: 1em;
 }
 
 .gm-ui-hover-effect:focus {
