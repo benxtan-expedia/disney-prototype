@@ -9,8 +9,14 @@ import {
   InfoWindow,
   useMap,
 } from "@vis.gl/react-google-maps";
-import { MarkerClusterer } from "@googlemaps/markerclusterer";
+import { MarkerClusterer, DefaultRenderer } from "@googlemaps/markerclusterer";
 import pois from "../../pois.json";
+
+const DISNEY_COLORS = {
+  small: "#002147", // Disney Navy
+  medium: "#0063be", // Disney Royal Blue
+  large: "#eb0028", // Mickey Red
+};
 
 const POI_ICONS = {
   hotel: "🏨",
@@ -22,6 +28,45 @@ const POI_ICONS = {
   pavilion: "🎪",
   "water slide": "🌊",
   stageshow: "🎭",
+};
+
+/**
+ * Custom Renderer to apply Disney styling
+ */
+/**
+ * Custom Renderer to apply Disney styling
+ */
+const disneyRenderer = {
+  render: ({
+    count,
+    position,
+  }: {
+    count: number;
+    position: google.maps.LatLng;
+  }) => {
+    // Determine color based on cluster size
+    let color = DISNEY_COLORS.small;
+    if (count > 10) color = DISNEY_COLORS.medium;
+    if (count > 50) color = DISNEY_COLORS.large;
+
+    // Create the SVG
+    const svg = window.btoa(`
+      <svg fill="${color}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="50" height="50">
+        <circle cx="12" cy="12" r="10" stroke="white" stroke-width="2"/>
+        <text x="50%" y="50%" fill="white" font-size="10" font-family="Arial" font-weight="bold" dy=".3em" text-anchor="middle">${count}</text>
+      </svg>`);
+
+    // Create the marker element
+    const img = document.createElement("img");
+    img.src = `data:image/svg+xml;base64,${svg}`;
+    img.style.filter = "drop-shadow(0px 2px 4px rgba(0,0,0,0.3))";
+    img.style.cursor = "pointer";
+
+    return new google.maps.marker.AdvancedMarkerElement({
+      position,
+      content: img,
+    });
+  },
 };
 
 /**
@@ -40,7 +85,10 @@ const MarkersWithClustering = ({ pois, onMarkerClick }) => {
   useEffect(() => {
     if (!map) return;
     if (!clusterer.current) {
-      clusterer.current = new MarkerClusterer({ map });
+      clusterer.current = new MarkerClusterer({
+        map,
+        renderer: disneyRenderer,
+      });
     }
   }, [map]);
 
