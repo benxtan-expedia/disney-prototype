@@ -10,7 +10,18 @@ import {
   useMap,
 } from "@vis.gl/react-google-maps";
 import { MarkerClusterer, DefaultRenderer } from "@googlemaps/markerclusterer";
+import { AnimatePresence, motion } from "framer-motion";
 import pois from "../../pois.json";
+
+import filterIcon from "../../../public/img/filter.png";
+import arrowLeftIcon from "../../../public/img/arrow-left.png";
+import magicKingdomIcon from "../../../public/img/magic-kingdom.png";
+import epcotIcon from "../../../public/img/epcot.png";
+import hollywoodStudiosIcon from "../../../public/img/hollywood-studios.png";
+import animalKingdomIcon from "../../../public/img/animal-kingdom.png";
+import typhoonLagoonIcon from "../../../public/img/typhoon-lagoon.png";
+import blizzardBeachIcon from "../../../public/img/blizzard-beach.png";
+import hotelIcon from "../../../public/img/hotel.png";
 
 const DISNEY_COLORS = {
   small: "#0063be",
@@ -30,6 +41,33 @@ const POI_ICONS = {
   "wave pool": "🌊",
   stageshow: "🎭",
 };
+
+const PARKS = [
+  { name: "Magic Kingdom", value: "magic-kingdom", icon: magicKingdomIcon },
+  { name: "EPCOT", value: "epcot", icon: epcotIcon },
+  {
+    name: "Hollywood Studios",
+    value: "hollywood-studios",
+    icon: hollywoodStudiosIcon,
+  },
+  { name: "Animal Kingdom", value: "animal-kingdom", icon: animalKingdomIcon },
+  { name: "Typhoon Lagoon", value: "typhoon-lagoon", icon: typhoonLagoonIcon },
+  { name: "Blizzard Beach", value: "blizzard-beach", icon: blizzardBeachIcon },
+];
+
+const ACCOMODATION_TYPES = [
+  { name: "Deluxe Hotels", value: "deluxe-hotels", icon: hotelIcon },
+  { name: "Deluxe Villas", value: "deluxe-villas", icon: hotelIcon },
+  {
+    name: "Value Resort Hotels",
+    value: "value-resort-hotels",
+    icon: hotelIcon,
+  },
+];
+
+const TRANSPORTATION_TYPES = [
+  { name: "Monorail", value: "monorail", icon: hotelIcon },
+];
 
 /**
  * Custom Renderer to apply Disney styling
@@ -158,11 +196,13 @@ const MarkersWithClustering = ({ pois, onMarkerClick }) => {
 };
 
 const DisneyMapContent = observer(() => {
+  const [isFilterVisible, setIsFilterVisible] = useState(false);
   const [selectedPoi, setSelectedPoi] = useState(null);
   const [selectedPark, setSelectedPark] = useState("all");
   const [showIcons, setShowIcons] = useState(true);
   const [showAttractions, setShowAttractions] = useState(true);
   const [showHotels, setShowHotels] = useState(true);
+  const [showMonorail, setShowMonorail] = useState(true);
 
   //
   //console.log(pois);
@@ -264,6 +304,7 @@ const DisneyMapContent = observer(() => {
 
   const filteredPois = useMemo(() => {
     return pois.filter((poi) => {
+      const name = poi["Points of Interest"].toLowerCase();
       const type = poi["Type of Interest"].toLowerCase();
       const park = poi["Theme Park or Location"].toLowerCase();
 
@@ -287,9 +328,17 @@ const DisneyMapContent = observer(() => {
 
       if (showHotels && type.includes("hotel")) return true;
 
+      if (
+        showMonorail &&
+        name.includes("monorail") &&
+        type.includes("transportation")
+      ) {
+        return true;
+      }
+
       return false;
     });
-  }, [selectedPark, showIcons, showAttractions, showHotels]); // Only recalculate when filter changes
+  }, [selectedPark, showIcons, showAttractions, showHotels, showMonorail]); // Only recalculate when filter changes
 
   const handleParkChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedPark(event.target.value);
@@ -300,69 +349,127 @@ const DisneyMapContent = observer(() => {
   return (
     <Container>
       {/* UI Overlay */}
-      <div
+
+      <button
         style={{
           position: "absolute",
           top: "10px",
           left: "10px",
           zIndex: 1,
-          backgroundColor: "white",
           padding: "10px",
-          borderRadius: "8px",
-          boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
           display: "flex",
           alignItems: "center",
           gap: "8px",
           fontFamily: "sans-serif",
+          borderRadius: "40px",
         }}
+        onClick={() =>
+          setIsFilterVisible((isFilterVisible) => !isFilterVisible)
+        }
       >
-        <label>Filter:</label>
+        <img src={filterIcon} alt="Filter icon" />
+      </button>
 
-        {/* Parks */}
+      <AnimatePresence>
+        {isFilterVisible && (
+          <motion.div
+            id="filter-panel"
+            key="modal"
+            initial={{ left: "-420px" }}
+            animate={{ left: "0px" }}
+            exit={{ left: "-420px" }}
+            transition={{ ease: "easeOut", duration: 0.2 }}
+          >
+            <button
+              id="filter-panel-close-button"
+              onClick={() =>
+                setIsFilterVisible((isFilterVisible) => !isFilterVisible)
+              }
+            >
+              <img src={arrowLeftIcon} alt="Close filter panel" />
+            </button>
 
-        <select value={selectedPark} onChange={handleParkChange}>
-          <option value="all">All Parks</option>
-          <option value="magic-kingdom">Magic Kingdom</option>
-          <option value="epcot">EPCOT</option>
-          <option value="hollywood-studios">Hollywood Studios</option>
-          <option value="animal-kingdom">Animal Kingdom</option>
-          <option value="typhoon-lagoon">Typhoon Lagoon</option>
-          <option value="blizzard-beach">Blizzard Beach</option>
-        </select>
+            <div className="filter-section">
+              <h3>Disney World Parks</h3>
+              <div className="filter-buttons-section">
+                {PARKS.map((park, index) => (
+                  <div className="filter-button" key={index}>
+                    <button
+                      className={selectedPark === park.value ? "selected" : ""}
+                      onClick={() => setSelectedPark(park.value)}
+                    >
+                      <img src={park.icon} alt="Park icon" />
+                    </button>
+                    <label>{park.name}</label>
+                  </div>
+                ))}
+              </div>
+            </div>
 
-        {/* Filter Checkboxes */}
+            <div className="filter-section">
+              <h3>Accomodation</h3>
+              <div className="filter-buttons-section">
+                {ACCOMODATION_TYPES.map((accomodation, index) => (
+                  <div className="filter-button" key={index}>
+                    <button
+                      className={showHotels ? "selected" : ""}
+                      onClick={() => setShowHotels(!showHotels)}
+                    >
+                      <img src={accomodation.icon} alt="Accomodation icon" />
+                    </button>
+                    <label>{accomodation.name}</label>
+                  </div>
+                ))}
+              </div>
+            </div>
 
-        <input
-          type="checkbox"
-          id="hotelFilter"
-          checked={showHotels}
-          onChange={(e) => setShowHotels(e.target.checked)}
-          style={{ cursor: "pointer" }}
-        />
-        <label htmlFor="hotelFilter" style={{ cursor: "pointer" }}>
-          Hotels
-        </label>
-        <input
-          type="checkbox"
-          id="iconsFilter"
-          checked={showIcons}
-          onChange={(e) => setShowIcons(e.target.checked)}
-          style={{ cursor: "pointer" }}
-        />
-        <label htmlFor="iconsFilter" style={{ cursor: "pointer" }}>
-          Icons
-        </label>
-        <input
-          type="checkbox"
-          id="attractionsFilter"
-          checked={showAttractions}
-          onChange={(e) => setShowAttractions(e.target.checked)}
-          style={{ cursor: "pointer" }}
-        />
-        <label htmlFor="attractionsFilter" style={{ cursor: "pointer" }}>
-          Attractions
-        </label>
-      </div>
+            <div className="filter-section">
+              <h3>Transportation</h3>
+              <div className="filter-buttons-section">
+                {TRANSPORTATION_TYPES.map((transportation, index) => (
+                  <div className="filter-button" key={index}>
+                    <button
+                      className={showMonorail ? "selected" : ""}
+                      onClick={() => setShowMonorail(!showMonorail)}
+                    >
+                      <img
+                        src={transportation.icon}
+                        alt="Transportation icon"
+                      />
+                    </button>
+                    <label>{transportation.name}</label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Filter Checkboxes */}
+
+            <div hidden>
+              <input
+                type="checkbox"
+                id="iconsFilter"
+                checked={showIcons}
+                onChange={(e) => setShowIcons(e.target.checked)}
+                style={{ cursor: "pointer" }}
+              />
+              <label htmlFor="iconsFilter" style={{ cursor: "pointer" }}>
+                Icons
+              </label>
+              <input
+                type="checkbox"
+                id="attractionsFilter"
+                checked={showAttractions}
+                onChange={(e) => setShowAttractions(e.target.checked)}
+                style={{ cursor: "pointer" }}
+              />
+              <label htmlFor="attractionsFilter" style={{ cursor: "pointer" }}>
+                Attractions
+              </label>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Map Component */}
 
@@ -372,6 +479,7 @@ const DisneyMapContent = observer(() => {
         minZoom={13}
         maxZoom={20}
         defaultCenter={{ lat: 28.419411, lng: -81.5812 }}
+        mapTypeControl={false}
       >
         <MarkersWithClustering
           pois={filteredPois}
