@@ -27,6 +27,7 @@ const POI_ICONS = {
   "golf course": "⛳",
   pavilion: "🎪",
   "water slide": "🌊",
+  "wave pool": "🌊",
   stageshow: "🎭",
 };
 
@@ -101,6 +102,18 @@ const MarkersWithClustering = ({ pois, onMarkerClick }) => {
       clusterer.current?.render();
     }, 50);
 
+    // Re-center
+    const bounds = new google.maps.LatLngBounds();
+
+    pois.forEach((poi) => {
+      // Extend the boundaries to include this point
+      bounds.extend(new google.maps.LatLng(poi.Latitude, poi.Longitude));
+    });
+
+    // Recenter and zoom the map to fit all points within these bounds
+    map.fitBounds(bounds);
+
+    // Return
     return () => clearTimeout(timer);
   }, [pois]);
 
@@ -146,21 +159,119 @@ const MarkersWithClustering = ({ pois, onMarkerClick }) => {
 
 const DisneyMapContent = observer(() => {
   const [selectedPoi, setSelectedPoi] = useState(null);
+  const [selectedPark, setSelectedPark] = useState("all");
   const [showIcons, setShowIcons] = useState(true);
   const [showAttractions, setShowAttractions] = useState(true);
   const [showHotels, setShowHotels] = useState(true);
 
+  //
+  //console.log(pois);
+  const uniqueIds = [
+    ...new Set(pois.map((item) => item["Area within Location"])),
+    //...new Set(pois.map((item) => item["Theme Park or Location"])),
+  ];
+  console.log(uniqueIds);
+
+  /*
+  // Unique Theme Parks or Locations:
+  [
+    "Magic Kingdom Park",
+    "Magic Kingdom Park Area",
+    "Disney's Grand Floridian Resort & Spa",
+    "Disney's Polynesian Village Resort",
+    "Disney's Contemporary Resort",
+    "Magic Kingdom Park Main Entrance",
+    "EPCOT",
+    "EPCOT ",
+    "EPCOT Area",
+    "EPCOT Main Entrance",
+    "EPCOT International Gateway Entrance",
+    "Disney's Hollywood Studios",
+    "Disney's Riviera Resort",
+    "Disney's Hollywood Studios Area",
+    "Disney's Caribbean Beach Resort",
+    "Disney's Art of Animation & Pop Century Resorts",
+    "Disney's Hollywood Studios Main Entrance",
+    "Disney's Hollywood Studios Resort Area",
+    "Disney's Animal Kingdom Theme Park",
+    "Disney's Animal Kingdom Theme Park Area",
+    "Disney Springs",
+    "Disney Springs Area ",
+    "Disney's Typhoon Lagoon Water Park",
+    "Disney's Blizzard Beach Water Park"
+  ]
+  */
+
+  /*
+  // Unique Areas within Locations:
+  [
+    "Main Street",
+    "Adventureland",
+    "Frontierland",
+    "Liberty Square",
+    "Fantasyland",
+    "Storybook Circus",
+    "Tomorrowland",
+    "Frontierland, Libery Square, Main Street",
+    "Above Cinderella Castle ",
+    "N/A",
+    "World Celebration",
+    "The Land Pavilion, World Nature",
+    "The Living Seas Pavilion, World Nature",
+    "The Imagination Pavilion, World Nature",
+    "World Discovery",
+    "World Showplace",
+    "Worldshowplace",
+    "France, World Showplace",
+    "Norway, World Showplace",
+    "Hollywood BLVD",
+    "Sunset BLVD",
+    "Animation Courtyard",
+    "Toy Story Land",
+    "Star Wars: Galaxy's Edge",
+    "Echo Lake",
+    "Hollywood Hills Amphitheater",
+    "Discovery Island",
+    "Pandora: The World of Avatar",
+    "Africa",
+    "Asia"
+  ]
+  */
+
   const filteredPois = useMemo(() => {
     return pois.filter((poi) => {
       const type = poi["Type of Interest"].toLowerCase();
+      const park = poi["Theme Park or Location"].toLowerCase();
+
+      if (
+        selectedPark !== "all" &&
+        !park.includes(selectedPark.replace("-", " "))
+      ) {
+        return false;
+      }
+
       if (showIcons && type.includes("icon")) return true;
-      if (showAttractions && type.includes("attraction")) return true;
+
+      if (
+        showAttractions &&
+        (type.includes("attraction") ||
+          type.includes("water slide") ||
+          type.includes("wave pool"))
+      ) {
+        return true;
+      }
+
       if (showHotels && type.includes("hotel")) return true;
+
       return false;
     });
-  }, [showIcons, showAttractions, showHotels]); // Only recalculate when checkboxes change
+  }, [selectedPark, showIcons, showAttractions, showHotels]); // Only recalculate when filter changes
 
-  const handleMarkerClick = useCallback((poi) => setSelectedPoi(poi), []);
+  const handleParkChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedPark(event.target.value);
+  };
+
+  const handleMarkerClick = useCallback((poi: any) => setSelectedPoi(poi), []);
 
   return (
     <Container>
@@ -181,29 +292,21 @@ const DisneyMapContent = observer(() => {
           fontFamily: "sans-serif",
         }}
       >
+        <label>Filter:</label>
+
+        {/* Parks */}
+
+        <select value={selectedPark} onChange={handleParkChange}>
+          <option value="all">All Parks</option>
+          <option value="magic-kingdom">Magic Kingdom</option>
+          <option value="epcot">EPCOT</option>
+          <option value="hollywood-studios">Hollywood Studios</option>
+          <option value="animal-kingdom">Animal Kingdom</option>
+          <option value="typhoon-lagoon">Typhoon Lagoon</option>
+          <option value="blizzard-beach">Blizzard Beach</option>
+        </select>
+
         {/* Filter Checkboxes */}
-
-        <input
-          type="checkbox"
-          id="iconsFilter"
-          checked={showIcons}
-          onChange={(e) => setShowIcons(e.target.checked)}
-          style={{ cursor: "pointer" }}
-        />
-        <label htmlFor="iconsFilter" style={{ cursor: "pointer" }}>
-          Icons
-        </label>
-
-        <input
-          type="checkbox"
-          id="attractionsFilter"
-          checked={showAttractions}
-          onChange={(e) => setShowAttractions(e.target.checked)}
-          style={{ cursor: "pointer" }}
-        />
-        <label htmlFor="attractionsFilter" style={{ cursor: "pointer" }}>
-          Attractions
-        </label>
 
         <input
           type="checkbox"
@@ -214,6 +317,26 @@ const DisneyMapContent = observer(() => {
         />
         <label htmlFor="hotelFilter" style={{ cursor: "pointer" }}>
           Hotels
+        </label>
+        <input
+          type="checkbox"
+          id="iconsFilter"
+          checked={showIcons}
+          onChange={(e) => setShowIcons(e.target.checked)}
+          style={{ cursor: "pointer" }}
+        />
+        <label htmlFor="iconsFilter" style={{ cursor: "pointer" }}>
+          Icons
+        </label>
+        <input
+          type="checkbox"
+          id="attractionsFilter"
+          checked={showAttractions}
+          onChange={(e) => setShowAttractions(e.target.checked)}
+          style={{ cursor: "pointer" }}
+        />
+        <label htmlFor="attractionsFilter" style={{ cursor: "pointer" }}>
+          Attractions
         </label>
       </div>
 
