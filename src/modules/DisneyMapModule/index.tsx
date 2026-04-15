@@ -167,10 +167,34 @@ const DisneyMapContent = observer(() => {
   //
   //console.log(pois);
   const uniqueIds = [
-    ...new Set(pois.map((item) => item["Area within Location"])),
+    //...new Set(pois.map((item) => item["Type of Interest"])),
+    //...new Set(pois.map((item) => item["Area within Location"])),
     //...new Set(pois.map((item) => item["Theme Park or Location"])),
   ];
-  console.log(uniqueIds);
+  //console.log(uniqueIds);
+
+  /*
+  // Unique Types of Interest:
+  [
+    "Area/Land",
+    "Attraction",
+    "Icon",
+    "Parade",
+    "Fireworks",
+    "Disney Resorts Collection Hotel",
+    "Transportation",
+    "Monorail Station (connects TTC to Magic Kingdom, EPCOT, Grand Floridian, Contemporary, and Polynesian)",
+    "Golf Course",
+    "Tier 1/Official Hotel",
+    "Icon/Attraction",
+    "Pavilion",
+    "Stageshow",
+    "Transportation - Connects to Art of Animation/Pop Century, Disney's Hollywood Studios, Riviera, and EPCOT",
+    "Outdoor Entertainment District where you can Shop, Dine, and Play! ",
+    "Wave Pool",
+    "Water Slide"
+  ]
+  */
 
   /*
   // Unique Theme Parks or Locations:
