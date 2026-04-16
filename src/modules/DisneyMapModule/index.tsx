@@ -198,7 +198,9 @@ const MarkersWithClustering = ({ pois, onMarkerClick }) => {
 const DisneyMapContent = observer(() => {
   const [isFilterVisible, setIsFilterVisible] = useState(false);
   const [selectedPoi, setSelectedPoi] = useState(null);
-  const [selectedPark, setSelectedPark] = useState("all");
+  const [selectedParks, setSelectedParks] = useState<string[]>(
+    PARKS.map((p) => p.value)
+  );
   const [showIcons, setShowIcons] = useState(true);
   const [showAttractions, setShowAttractions] = useState(true);
   const [showHotels, setShowHotels] = useState(true);
@@ -308,10 +310,7 @@ const DisneyMapContent = observer(() => {
       const type = poi["Type of Interest"].toLowerCase();
       const park = poi["Theme Park or Location"].toLowerCase();
 
-      if (
-        selectedPark !== "all" &&
-        !park.includes(selectedPark.replace("-", " "))
-      ) {
+      if (!selectedParks.some((sp) => park.includes(sp.replace("-", " ")))) {
         return false;
       }
 
@@ -338,10 +337,16 @@ const DisneyMapContent = observer(() => {
 
       return false;
     });
-  }, [selectedPark, showIcons, showAttractions, showHotels, showMonorail]); // Only recalculate when filter changes
+  }, [selectedParks, showIcons, showAttractions, showHotels, showMonorail]);
 
-  const handleParkChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedPark(event.target.value);
+  const handleParkToggle = (parkValue: string) => {
+    setSelectedParks((prev) => {
+      if (prev.includes(parkValue)) {
+        if (prev.length === 1) return prev;
+        return prev.filter((p) => p !== parkValue);
+      }
+      return [...prev, parkValue];
+    });
   };
 
   const handleMarkerClick = useCallback((poi: any) => setSelectedPoi(poi), []);
@@ -395,8 +400,8 @@ const DisneyMapContent = observer(() => {
                 {PARKS.map((park, index) => (
                   <div className="filter-button" key={index}>
                     <button
-                      className={selectedPark === park.value ? "selected" : ""}
-                      onClick={() => setSelectedPark(park.value)}
+                      className={selectedParks.includes(park.value) ? "selected" : ""}
+                      onClick={() => handleParkToggle(park.value)}
                     >
                       <img src={park.icon} alt="Park icon" />
                     </button>
