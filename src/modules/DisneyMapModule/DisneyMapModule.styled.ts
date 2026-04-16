@@ -45,7 +45,7 @@ export const Container = styled.div`
   #filter-panel-close-button {
     position: absolute;
     display: block;
-    margin: 100% 420px 10px;
+    margin: 90% 420px 10px;
     padding: 20px 25px 20px 0px;
     top: -50px;
     border-radius: 10px;
