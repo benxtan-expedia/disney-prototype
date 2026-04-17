@@ -1,12 +1,12 @@
 import "./index.css";
 import { StrictMode } from "react";
-import { hydrateRoot } from "react-dom/client";
+import { createRoot } from "react-dom/client";
 import App from "./App";
 import { StoreProvider } from "./context/StoreContext";
 import { createAppStore } from "./stores/AppStore";
 import { AppStore } from "./types/store";
 import { AppContextType } from "./types/context";
-import { AppContextProvider } from "./context/AppContext";
+import { AppContextProvider, defaultContextValue } from "./context/AppContext";
 
 /**
  * Extend Window interface to include our injected properties
@@ -18,19 +18,14 @@ declare global {
   }
 }
 
-// Restore store state from server
+// Restore store state from server, or create a fresh one (static/SPA mode)
 const initialStore = window.__INITIAL_STORE__;
 const store = createAppStore(initialStore);
 
-// Restore context from server
-const context = window.__INITIAL_CONTEXT__;
+// Restore context from server, or fall back to defaults (static/SPA mode)
+const context = window.__INITIAL_CONTEXT__ ?? defaultContextValue;
 
-if (!context) {
-  throw new Error("Initial context not found");
-}
-
-hydrateRoot(
-  document.getElementById("root") as HTMLElement,
+createRoot(document.getElementById("root") as HTMLElement).render(
   <StrictMode>
     <StoreProvider store={store}>
       <AppContextProvider value={context}>
@@ -39,7 +34,3 @@ hydrateRoot(
     </StoreProvider>
   </StrictMode>,
 );
-
-console.log("✅ App hydrated successfully!");
-console.log("📦 Store state:", store);
-console.log("🌍 Context:", context);

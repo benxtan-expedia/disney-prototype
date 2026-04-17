@@ -1,5 +1,5 @@
 import { observer } from "mobx-react-lite";
-import { MapContainer, ImageOverlay, Marker, Popup, useMap } from "react-leaflet";
+import { MapContainer, ImageOverlay, Marker, Popup, useMap, useMapEvent } from "react-leaflet";
 import L, { LatLngBoundsExpression } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { Container } from "./DisneyCustomMapModule.styled";
@@ -131,12 +131,36 @@ const badgeClass: Record<POIType, string> = {
   Resort: "resort",
 };
 
+// ── Zoom out to fill width when popup is closed ────────────────────────────
+const ResetOnPopupClose = () => {
+  const map = useMap();
+  useMapEvent("popupclose", () => {
+    map.flyToBounds(bounds, { duration: 0.6 });
+  });
+  return null;
+};
+
 // ── Marker that flies to itself on click ───────────────────────────────────
 const ZoomableMarker = ({ poi }: { poi: POI }) => {
   const map = useMap();
 
   const handleClick = () => {
-    map.flyTo(poi.position, 2, { duration: 0.8 });
+    const ZOOM = 2;
+    const [lat, lng] = poi.position;
+
+    // In Leaflet CRS.Simple, 1 map unit = 2^zoom screen pixels.
+    // Calculate how many map units fill half the container at the target zoom,
+    // then clamp the fly-to center so the viewport stays within image bounds
+    // without Leaflet doing its own clamping (which pushes the POI to the edge).
+    const { x: containerW, y: containerH } = map.getSize();
+    const scale = Math.pow(2, ZOOM);
+    const halfW = containerW / 2 / scale;
+    const halfH = containerH / 2 / scale;
+
+    const centerLng = Math.max(halfW, Math.min(IMAGE_W - halfW, lng));
+    const centerLat = Math.max(halfH, Math.min(IMAGE_H - halfH, lat));
+
+    map.flyTo([centerLat, centerLng], ZOOM, { duration: 0.8 });
   };
 
   return (
@@ -172,6 +196,7 @@ const DisneyCustomMapContent = () => (
     scrollWheelZoom
     zoomControl
   >
+    <ResetOnPopupClose />
     <ImageOverlay url="/img/disney-map.jpg" bounds={bounds} />
 
     {POIS.map((poi) => (
