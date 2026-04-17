@@ -9,6 +9,8 @@
   height: 100%;
   margin: 0 auto;
   text-align: center;
+  padding-top: 52px;
+  box-sizing: border-box;
 }
 
 @keyframes rotate {

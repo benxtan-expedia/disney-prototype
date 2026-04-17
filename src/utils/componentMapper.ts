@@ -37,6 +37,10 @@ const componentMapper: ComponentMapper = {
   disneyMapModule: loadable(() => import("../modules/DisneyMapModule"), {
     ssr: false,
   }),
+  disneyCustomMapModule: loadable(
+    () => import("../modules/DisneyCustomMapModule"),
+    { ssr: false }
+  ),
 };
 
 export default componentMapper;
