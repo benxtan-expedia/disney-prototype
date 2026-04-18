@@ -1,5 +1,12 @@
 import { observer } from "mobx-react-lite";
-import { MapContainer, ImageOverlay, Marker, Popup, useMap, useMapEvent } from "react-leaflet";
+import {
+  MapContainer,
+  ImageOverlay,
+  Marker,
+  Popup,
+  useMap,
+  useMapEvent,
+} from "react-leaflet";
 import L, { LatLngBoundsExpression } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { Container } from "./DisneyCustomMapModule.styled";
@@ -13,6 +20,15 @@ const IMAGE_H = 660;
 const bounds: LatLngBoundsExpression = [
   [0, 0],
   [IMAGE_H, IMAGE_W],
+];
+
+// Allow 10% extra space beyond the image edges so POIs near the
+// borders (e.g. Magic Kingdom) can be panned to a more central position.
+const PAD_H = IMAGE_H * 0.1;
+const PAD_W = IMAGE_W * 0.1;
+const paddedBounds: LatLngBoundsExpression = [
+  [-PAD_H, -PAD_W],
+  [IMAGE_H + PAD_H, IMAGE_W + PAD_W],
 ];
 
 // ── Coordinate helper ──────────────────────────────────────────────────────
@@ -187,10 +203,10 @@ const DisneyCustomMapContent = () => (
   <MapContainer
     crs={L.CRS.Simple}
     center={[IMAGE_H / 2, IMAGE_W / 2]}
-    zoom={0}
-    minZoom={0}
+    zoom={-0.2}
+    minZoom={-0.2}
     maxZoom={3}
-    maxBounds={bounds}
+    maxBounds={paddedBounds}
     maxBoundsViscosity={1.0}
     style={{ width: "100%", height: "100%" }}
     scrollWheelZoom
